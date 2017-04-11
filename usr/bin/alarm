@@ -1,0 +1,120 @@
+#!/bin/bash
+TXTN="\e[0m"
+TXTA="\e[1m"
+ALARM_TIME=$(echo $1)
+SLEEP_TIME="600"
+echo "alarm set for: $ALARM_TIME"
+case $2 in
+	1)
+	echo "using alarm sound 1"
+	ALARM="./alarm1.wav"
+	;;
+	2)
+	echo "using alarm sound 2"
+	ALARM="./alarm2.wav"
+	;;
+	*)
+	echo "using default alarm sound"
+	ALARM="./alarm0.wav"
+	;;
+esac
+while true; do
+BUTTON='x'
+while true; do
+TIME=$(date +%H:%M)
+clear
+echo -e "$TXTN
+  Time  : $TXTA$TIME$TXTN
+  Alarm : $TXTA$ALARM_TIME$TXTN
+
+  Set Alarm = A"
+if [ "$TIME" = "$ALARM_TIME" ]
+then
+break
+fi
+if [ "$BUTTON" = "a" ]
+then
+clear
+echo -e "$TXTN
+  Time : $TXTA$TIME
+  
+  SET ALARM$TXTN
+  Format    = HH:MM
+  Alarm off = ENTER
+_____________________
+"
+read -t 30 -n 5 ALARM_TIME 
+fi
+read -t 0.5 -n 1 -s  BUTTON
+done
+
+function buttonpress 
+{
+cvlc --vout none --repeat "$ALARM" 2>/dev/null &
+ALARM_PROCESS=$!
+BUTTON='x'
+while [[ "$BUTTON" != "s" && "$BUTTON" != "k" ]]; do
+TIME=$(date +%H:%M)
+clear
+echo -e "$TXTN
+  Time   : $TXTA$TIME
+  ALARM!$TXTN : $TXTA$ALARM_TIME$TXTN
+
+  Snooze = S
+  Stop   = K"
+read -t 0.5 -n 1 -s  BUTTON
+done 
+kill $ALARM_PROCESS
+if [ "$BUTTON" = "k" ];
+then
+while [[ "$ALARM_TIME" = "$TIME" ]]; do
+TIME=$(date +%H:%M)
+clear
+echo -e "$TXTN
+  Time  : $TXTA$TIME$TXTN
+  Alarm : $TXTA$ALARM_TIME$TXTN"
+sleep 1
+done
+continue 2
+fi
+}
+
+function snooze 
+{
+BUTTON='x'
+END=$((SECONDS+$SLEEP_TIME))
+while [ $SECONDS -lt $END ]; do
+while [[ "$BUTTON" != "k" && $SECONDS -lt $END ]]; do
+TIME=$(date +%H:%M)
+clear
+echo -e "$TXTN
+  Time   : $TXTA$TIME
+  ALARM!$TXTN : $TXTA$ALARM_TIME
+  SNOOZE$TXTN
+
+  Stop   = K"
+read -t 0.5 -n 1 -s  BUTTON
+done
+if [ "$BUTTON" = "k" ];
+then
+while [[ "$ALARM_TIME" = "$TIME" ]]; do
+TIME=$(date +%H:%M)
+clear
+echo -e "$TXTN
+  Time  : $TXTA$TIME$TXTN
+  Alarm : $TXTA$ALARM_TIME"
+sleep 1
+done
+continue 3
+fi
+done
+}
+
+while true; do
+buttonpress
+if [ "$BUTTON" = "s" ];
+then
+snooze
+fi
+done
+done
